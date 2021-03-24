@@ -52,24 +52,19 @@ class LookupTable extends NodeAssignment with Serializable {
     return sb.toString();
   }
 
-  // Added
-//  def getPartitionsAsString() = {
-//    partitions.map(_._2).mkString("|")
-//  }
-
 }
 
 object LookupTable {
   def generate(nodes: Set[NetAddress], delta: Int): LookupTable = {
     val lut = new LookupTable()
     var counter = 0
-    var set: mutable.Set[NetAddress] = mutable.Set.empty
+    var addressSet: mutable.Set[NetAddress] = mutable.Set.empty
     for (netAddress <- nodes) {
-      set += netAddress
-      if (set.size == delta) {
-        lut.partitions ++= (counter -> set)
+      addressSet += netAddress
+      if (addressSet.size == delta) {    //taking rep degree into consideration here 
+        lut.partitions ++= (counter -> addressSet)
         counter += 1
-        set.clear()
+        addressSet.clear()
       }
     }
     lut
