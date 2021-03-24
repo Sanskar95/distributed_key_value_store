@@ -73,7 +73,7 @@ class GossipLeaderElection extends ComponentDefinition {
       leader = None
 
     } else {
-      if (leader.isDefined) {
+      if (leader!=None) {
         if ((topBallot, topProcess) != leader.get) {
           highestBallot = topBallot;
           leader = Some((topBallot, topProcess));

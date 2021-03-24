@@ -42,8 +42,8 @@ class SequencePaxos extends ComponentDefinition {
   val pl = requires[Network];
 
   val las = mutable.Map.empty[NetAddress, Int];
-  val lds = mutable.Map.empty[NetAddress, Int];
-  val acks = mutable.Map.empty[NetAddress, (Long, List[Op])];
+  var lds = mutable.Map.empty[NetAddress, Int];
+  var acks = mutable.Map.empty[NetAddress, (Long, List[Op])];
   var self: NetAddress = cfg.getValue[NetAddress]("id2203.project.address");
   var pi: Set[NetAddress] = Set[NetAddress]()
   var others: Set[NetAddress] = Set[NetAddress]()
@@ -61,29 +61,28 @@ class SequencePaxos extends ComponentDefinition {
 
   ble uponEvent {
     case BLE_Leader(l, n) => {
-      if (n > nL) {
-        leader = Some(l);
-        nL = n;
-        println(s"---------------------------")
-        println(s"New leader has been elected: $leader");
-        println(s"---------------------------")
-        if (self == l && nL > nProm) {
-          state = (LEADER, PREPARE);
+      /* INSERT YOUR CODE HERE */
+      if(n>nL){
+        leader=Option(l);
+        nL=n;
+        if(l==self && nL>nProm){
+          state=(LEADER,PREPARE);
           propCmds = List.empty[Op];
           for (p <- pi) {
-            las += ((p, 0))
+            las(p) = 0;
           }
-          lds.clear;
-          acks.clear;
-          lc = 0;
-          for (p <- pi - self) {
-            trigger(NetMessage(self, p, Prepare(nL, ld, na)) -> pl);
+          lds =mutable.Map.empty[NetAddress, Int];
+          acks = mutable.Map.empty[NetAddress, (Long, List[Op])];
+          lc=0;
+          for(p<-others){
+            trigger(NetMessage(self,p,Prepare(nL, ld, na))->pl);
           }
-          acks += ((l, (na, suffix(va, ld))))
-          lds += ((self, ld))
-          nProm = nL;
-        } else {
-          state = (FOLLOWER, state._2);
+          acks(l)=(na, suffix(va,ld));
+          lds(self)=ld;
+          nProm=nL;
+
+        }else{
+          state=(FOLLOWER,state._2);
         }
       }
     }
@@ -102,30 +101,41 @@ class SequencePaxos extends ComponentDefinition {
       }
     }
     case NetMessage(a, Promise(n, na, sfxa, lda)) => {
-      if ((n == nL) && (state == (LEADER, PREPARE))) {
-        acks += ((a.src, (na, sfxa)))
+            if ((n == nL) && (state == (LEADER, PREPARE))) {
+        /* INSERT YOUR CODE HERE */
+         acks += ((a.src, (na, sfxa)))
         lds += ((a.src, lda))
-        val P = pi.filter(acks isDefinedAt _);
-        val Psize = P.size;
-        if (P.size == majority) {
-          val (k, sfx) = acks.maxBy{case (_, (v, _)) => v };
-          va = prefix(va, ld) ++ sfx._2 ++ propCmds;
-          las(self) = va.size
+
+        if (acks.size >= majority) {
+          var sfx = List.empty[Op];
+          var maxRound = 0L;
+
+          for (ack <- acks) {
+            if ((ack._2._1 > maxRound)) {
+              maxRound = ack._2._1;
+              sfx = ack._2._2;
+            }
+          }
+
+          va = prefix(va, ld) ++ sfx ++ propCmds;
+          las(self) = va.size;
           propCmds = List.empty[Op];
           state = (LEADER, ACCEPT);
           for (p <- pi) {
-            if ((lds isDefinedAt p) && p != self) {
-              val sfxp = suffix(va, lds(p));
-              trigger(NetMessage(self, p, AcceptSync(nL, sfxp, lds(p))) -> pl);
+            if (lds.contains(p) && p != self) {
+              var sfxp = suffix(va, lds(p));
+              trigger(NetMessage(self,p, AcceptSync(nL, sfxp, lds(p))) -> pl);
             }
           }
         }
-      } else if ((n == nL) && (state == (LEADER, ACCEPT))) {
-        lds(a.src) = lda;
-        var sfx = suffix(va, lds(a.src));
-        trigger(NetMessage(self, a.src, AcceptSync(nL, sfx, lds(a.src))) -> pl);
-        if (lc != 0) {
-          trigger(NetMessage(self, a.src, Decide(ld, nL)) -> pl);
+      }
+      else if ((n == nL) && (state == (LEADER, ACCEPT))) {
+        /* INSERT YOUR CODE HERE */
+       lds(a.src) = lda;
+         var sfx = suffix(va, lds(a.src));
+        trigger(NetMessage(self,a.src, AcceptSync(nL, sfx, lds(a.src))) -> pl);
+        if(lc!=0){
+          trigger(NetMessage(self,a.src, Decide(ld, nL))->pl)
         }
       }
     }
