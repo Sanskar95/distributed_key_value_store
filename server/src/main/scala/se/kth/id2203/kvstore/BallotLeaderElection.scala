@@ -32,10 +32,10 @@ class GossipLeaderElection extends ComponentDefinition {
   var majority = 0;
 
   private var period = delta;
-  private val ballots = mutable.Map.empty[NetAddress, Long];
+  private var ballots = mutable.Map.empty[NetAddress, Long];
 
   private var round = 0L;
-  private var ballot = ballotFromNAddress(0, self);
+   var ballot = ballotFromNAddress(0, self);
 
   private var leader: Option[(Long, NetAddress)] = None;
   private var highestBallot: Long = ballot;
@@ -64,38 +64,44 @@ class GossipLeaderElection extends ComponentDefinition {
   }
 
   private def checkLeader(): Unit = {
+     /* INSERT YOUR CODE HERE */
     ballots += ((self, ballot));
     val top = ballots.maxBy(_._2);
     val (topProcess, topBallot) = top;
+    if(topBallot<highestBallot)
+    {
+      while(ballot<=highestBallot)
+      {
+        ballot=incrementBallot(ballot);
+      }
+      leader=None;
+    }
+    else
+    {
+      if(Some(top)!=leader)
+      {
+        highestBallot=topBallot;
+               leader = Some((topBallot, topProcess));
 
-    if (topBallot < highestBallot) {
-      ballot = incrementBallotBy(ballot, topBallot - ballot + 1)
-      leader = None
-
-    } else {
-      if (leader.isDefined) {
-        if ((topBallot, topProcess) != leader.get) {
-          highestBallot = topBallot;
-          leader = Some((topBallot, topProcess));
-          trigger(BLE_Leader(topProcess, topBallot) -> ble);
-        }
-      } else {
-        highestBallot = topBallot;
-        leader = Some((topBallot, topProcess));
-        trigger(BLE_Leader(topProcess, topBallot) -> ble);
+        trigger(BLE_Leader(topProcess,topBallot)->ble);
       }
     }
+
   }
 
   timer uponEvent {
-    case CheckTimeout(_) => {
-      if (ballots.size + 1 >= majority) {
+   case CheckTimeout(_) =>  {
+      /* INSERT YOUR CODE HERE */
+      if((ballots.size+1)>=majority)
+      {
         checkLeader();
       }
-      ballots.clear
-      round += 1;
-      for (p <- topology) {
-        if (p != self) {
+      ballots =  mutable.Map.empty[NetAddress, Long];
+      round= round+1;
+      for(p<-topology)
+      {
+        if(p!=self)
+        {
           trigger(NetMessage(self, p, HeartbeatReq(round, highestBallot)) -> pl);
         }
       }

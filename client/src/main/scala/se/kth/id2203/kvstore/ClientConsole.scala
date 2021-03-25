@@ -50,7 +50,7 @@ class ClientConsole(val service: ClientService) extends CommandConsole with Pars
   }
   val getCommand = parsed(getParser, usage = "GET <key>", descr = "Gets a value for a <key>") { key =>
     println(s"GET with $key");
-    val response = runOp(Get(key, service.self))
+    val response = executeOperation(Get(key, service.self))
     if (response != null) {
       println(s"Response received. Status: ${response.status} Value: ${response.value}")
     }
@@ -62,7 +62,7 @@ class ClientConsole(val service: ClientService) extends CommandConsole with Pars
   val putCommand = parsed(putParser, usage = "PUT <key> <value>", descr = "Puts a <value> at a <key>") { parse =>
     val (key, value) = parse
     println(s"PUT value $value to key $key");
-    val response = runOp(Put(key, value, service.self))
+    val response = executeOperation(Put(key, value, service.self))
     if (response != null) {
       println(s"Response received. Status: ${response.status}")
     }
@@ -74,35 +74,20 @@ class ClientConsole(val service: ClientService) extends CommandConsole with Pars
   val casCommand = parsed(casParser, usage = "CAS <key> <referenceValue> <value>", descr = "Puts a <value> at a <key> if current value is <referenceValue>") { parse =>
     val (key, value, referenceValue) = parse
     println(s"CAS value $value to key $key if current value is $referenceValue");
-    val response = runOp(Cas(key, referenceValue, value, service.self))
+    val response = executeOperation(Cas(key, referenceValue, value, service.self))
     if (response != null) {
       println(s"Response received. Status: ${response.status}")
     }
   }
 
-  def runOp(operation: Op): OpResponse = {
-    val fr = service.op(operation)
-    println("Operation sent! Awaiting response...");
+  def executeOperation(operation: Op): OpResponse = {
+    val fr = service.operation(operation)
+    println("Operation sent to server group for execution , waiting for response");
     try {
       Await.result(fr, 5.seconds);
     } catch {
-      case e: Throwable => logger.error("Error during op.", e)
+      case e: Throwable => logger.error("Something went wrong while performing the operation!!!!!!", e)
       null
     }
   }
-
-  /*
-  val GETCommand = parsed(opParser, usage = "GET <key>", descr = "Gets value for <key>.") { key =>
-    println(s"GET value for key: $key");
-
-    val fr = service.op(key);
-    out.println("Operation sent! Awaiting response...");
-    try {
-      val r = Await.result(fr, 5.seconds);
-      out.println("Operation complete! Response was: " + r.status);
-    } catch {
-      case e: Throwable => logger.error("Error during GET.", e);
-    }
-  };
-  */
 }

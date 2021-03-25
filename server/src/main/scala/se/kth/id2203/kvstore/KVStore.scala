@@ -34,22 +34,18 @@ import scala.collection.mutable;
 
 class KVService extends ComponentDefinition {
 
-  //******* Ports ******
   val net: PositivePort[Network] = requires[Network];
   val route: PositivePort[Routing.type] = requires(Routing);
   val sc: PositivePort[SequenceConsensus] = requires[SequenceConsensus];
 
-  //******* Fields ******
   val self: NetAddress = cfg.getValue[NetAddress]("id2203.project.address");
 
-  // members
   val keyValueMap = mutable.Map.empty[String, String]
 
   for (i <- 0 to 10) {
     keyValueMap += ((i.toString, (100 + i).toString))
   }
 
-  //******* Handlers ******
   net uponEvent {
     case NetMessage(_, op: Op) => {
       trigger(SC_Propose(op) -> sc);
@@ -58,19 +54,20 @@ class KVService extends ComponentDefinition {
 
   sc uponEvent {
     case SC_Decide(op: Get) => {
-      println(s"GET operation $op");
+      println(s"Current operation GET $op");
       val result = if (keyValueMap contains op.key) Some(keyValueMap(op.key)) else None
       trigger(NetMessage(self, op.source, op.response(OpCode.Ok, result)) -> net);
     }
     case SC_Decide(op: Put) => {
-      println(s"PUT operation $op");
+      println(s"Current operation PUT $op");
       keyValueMap += ((op.key, op.value))
       trigger(NetMessage(self, op.source, op.response(OpCode.Ok, Some(op.value))) -> net);
     }
     case SC_Decide(op: Cas) => {
-      println(s"CAS operation $op");
+      println(s"Current operation CAS  $op");
       val storedValue: Option[String] = if (keyValueMap.get(op.key).isDefined) Some(keyValueMap(op.key)) else None
-      if (storedValue.isDefined && storedValue.get == op.oldValue) keyValueMap += ((op.key, op.newValue))
+      println(s"current stored value is $storedValue");
+      if (storedValue.isDefined && storedValue.get.equals(op.oldValue)) keyValueMap += ((op.key, op.newValue))
       trigger(NetMessage(self, op.source, op.response(OpCode.Ok, storedValue)) -> net)
     }
   }

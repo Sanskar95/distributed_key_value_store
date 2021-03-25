@@ -27,11 +27,11 @@ class EPFD extends ComponentDefinition {
   val epfd = provides[EventuallyPerfectFailureDetector];
 
   val self: NetAddress = cfg.getValue[NetAddress]("id2203.project.address");
-  var currentTopology: List[NetAddress] = List.empty;
+  var topology: List[NetAddress] = List.empty;
   var systemTopology: Option[LookupTable] = None
 
   val delta = 2000;
-  var period = 2000;
+  var delay = 2000;
 
   var alive = Set[NetAddress]();
   var suspected = Set[NetAddress]();
@@ -39,33 +39,37 @@ class EPFD extends ComponentDefinition {
   var debugSource: Option[NetAddress] = None
 
   def startTimer(delay: Long): Unit = {
-    val scheduledTimeout = new ScheduleTimeout(period);
+    val scheduledTimeout = new ScheduleTimeout(delay);
     scheduledTimeout.setTimeoutEvent(CheckTimeout(scheduledTimeout));
     trigger(scheduledTimeout -> timer);
   }
 
   timer uponEvent {
     case CheckTimeout(_) => {
-      if (alive.intersect(suspected).nonEmpty) {
-        period += delta;
+            if (!alive.intersect(suspected).isEmpty) {
+
+        /* WRITE YOUR CODE HERE  */
+        delay= delay + delta;
+
       }
+
       seqnum = seqnum + 1;
-      for (p <- currentTopology) {
+
+      for (p <- topology) {
         if (!alive.contains(p) && !suspected.contains(p)) {
-          suspected += p;
-          println(s"$self EFPD suspected $p")
-          trigger(Suspect(p) -> epfd)
-          if(debugSource.isDefined)
-            trigger(NetMessage(self, debugSource.get, Suspect(p)) -> pLink)
+
+          /* WRITE YOUR CODE HERE  */
+          suspected = suspected + p;
+          trigger(Suspect(p) -> epfd);
+
         } else if (alive.contains(p) && suspected.contains(p)) {
           suspected = suspected - p;
-            println(s"$self EFPD restored $p")
-            trigger(Restore(p) -> epfd);
+          trigger(Restore(p) -> epfd);
         }
           trigger(NetMessage(self, p, HeartbeatRequest(seqnum)) -> pLink);
       }
-      alive = Set[NetAddress]();
-      startTimer(period);
+     alive = Set[NetAddress]();
+      startTimer(delay);
     }
   }
 
@@ -82,10 +86,10 @@ class EPFD extends ComponentDefinition {
   epfd uponEvent {
     case StartDetector(lookupTable: Option[LookupTable], nodes: Set[NetAddress]) => {
       systemTopology = lookupTable
-      currentTopology = nodes.toList;
+      topology = nodes.toList;
       suspected = Set[NetAddress]();
-      alive = currentTopology.toSet
-      startTimer(period);
+      alive = topology.toSet
+      startTimer(delay);
     }
   }
 

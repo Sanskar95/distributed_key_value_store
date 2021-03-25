@@ -59,34 +59,34 @@ class ParentComponent extends ComponentDefinition {
   val ble: Component = create(classOf[GossipLeaderElection], Init.NONE);
   val seqCons: Component = create(classOf[SequencePaxos], Init.NONE);
   {
-    // Boot
+    // connecting Boot
     connect[Timer](timer -> boot);
     connect[Network](net -> boot);
 
-    // Overlay
+    // connecting Overlay
     connect(Bootstrapping)(boot -> overlay);
     connect[Network](net -> overlay);
     connect[EventuallyPerfectFailureDetector](epfd -> overlay);
     connect[BestEffortBroadcast](beb -> overlay)
     connect[SequenceConsensus](seqCons -> overlay)
 
-    // KV
+    //connecting  KV
     connect(Routing)(overlay -> kv);
     connect[Network](net -> kv);
     connect[SequenceConsensus](seqCons -> kv);
 
-    // EPFD
+    // connecting EPFD
     connect[Timer](timer -> epfd);
     connect[Network](net -> epfd);
 
-    // BEB
+    // connecting BEB
     connect[Network](net -> beb);
 
-    // BLE
+    // connecting BLE
     connect[Timer](timer -> ble)
     connect[Network](net -> ble)
 
-    // Sequence Paxos
+    // connecting Sequence Paxos
     connect[Network](net -> seqCons);
     connect[BallotLeaderElection](ble -> seqCons);
   }
