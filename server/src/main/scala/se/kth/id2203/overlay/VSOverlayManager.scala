@@ -86,14 +86,14 @@ class VSOverlayManager extends ComponentDefinition {
       log.info("assignment: ", assignment);
       log.info("Got NodeAssignment, overlay ready.");
       lut = Some(assignment);
-      val currentPartition = assignment.partitions.find(_._2.exists(_.equals(self)))
-      currentPartition match {
+      assignment.partitions.find(_._2.exists(_.equals(self))) match {
         case Some((_, cp)) =>
+        // starting the componnets if partition is present
           trigger(BEB_Topology(cp.toSet) -> beb)
           trigger(StartDetector(lut, cp.toSet) -> epfd)
           trigger(StartSequenceCons(cp.toSet) -> seqCons)
         case None =>
-          print("Current partition not found")
+          print("The partition does not exist")
       }
     }
   }

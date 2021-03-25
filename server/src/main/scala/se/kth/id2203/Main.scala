@@ -53,6 +53,8 @@ object Main {
 
   def main(args: Array[String]): Unit = {
     val conf = new Conf(args.toSeq);
+    // avoid constant conversion of the address by converting once and reassigning
+    // sorry Java API  only :(
     val c = Kompics.getConfig().asInstanceOf[Config.Impl];
     val configSelf = c.getValue("id2203.project.address", classOf[NetAddress]);
     assert(configSelf != null, { "No config provided!" }); // it would be in the reference.conf
