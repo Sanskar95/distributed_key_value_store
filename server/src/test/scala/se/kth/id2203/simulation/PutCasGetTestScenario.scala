@@ -47,14 +47,14 @@ class PutCasGetTestClient extends ComponentDefinition {
   ctrl uponEvent {
     case _: Start => {
       val range = SimulationResult[String]("pcgTest")
-      val boundaries = range.split('-')
-      for (i <- boundaries(0).toInt to boundaries(1).toInt) {
+      val intervals = range.split('-')
+      for (i <- intervals(0).toInt to intervals(1).toInt) {
         val put = Put(i.toString, i.toString, self)
         val putMsg = RouteMsg(put.key, put)
         trigger(NetMessage(self, server, putMsg) -> net)
 
-        val prevValue = if(i % 2 == 1) i else i*10
-        val cas = Cas(i.toString, prevValue.toString, (10*i).toString, self)
+        val oldValue = if(i % 2 == 1) i else i*10
+        val cas = Cas(i.toString, oldValue.toString, (10*i).toString, self)
         val casMsg = RouteMsg(cas.key, cas)
         trigger(NetMessage(self, server, casMsg) -> net)
 
