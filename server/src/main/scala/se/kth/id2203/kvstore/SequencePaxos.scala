@@ -42,8 +42,8 @@ class SequencePaxos extends ComponentDefinition {
   val pl = requires[Network];
 
   val las = mutable.Map.empty[NetAddress, Int];
-  val lds = mutable.Map.empty[NetAddress, Int];
-  val acks = mutable.Map.empty[NetAddress, (Long, List[Op])];
+  var lds = mutable.Map.empty[NetAddress, Int];
+  var acks = mutable.Map.empty[NetAddress, (Long, List[Op])];
   var self: NetAddress = cfg.getValue[NetAddress]("id2203.project.address");
   var pi: Set[NetAddress] = Set[NetAddress]()
   var others: Set[NetAddress] = Set[NetAddress]()
@@ -66,24 +66,22 @@ class SequencePaxos extends ComponentDefinition {
       if (n > nL) {
         leader = Some(l);
         nL = n;
-        println(s"---------------------------")
-        println(s"New leader has been elected: $leader");
-        println(s"---------------------------")
         if (self == l && nL > nProm) {
           state = (LEADER, PREPARE);
           propCmds = List.empty[Op];
           for (p <- pi) {
             las += ((p, 0))
           }
-          lds.clear;
-          acks.clear;
+          lds = mutable.Map.empty[NetAddress, Int];
+          acks = mutable.Map.empty[NetAddress, (Long, List[Op])];
           lc = 0;
           for (p <- pi - self) {
             trigger(NetMessage(self, p, Prepare(nL, ld, na)) -> pl);
           }
-          acks += ((l, (na, suffix(va, ld))))
-          lds += ((self, ld))
-          nProm = nL;
+          acks(l)=(na, suffix(va,ld));
+          lds(self)=ld;
+          nProm=nL;
+
         } else {
           state = (FOLLOWER, state._2);
         }

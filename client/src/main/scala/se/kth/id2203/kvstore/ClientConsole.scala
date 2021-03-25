@@ -35,12 +35,9 @@ object ClientConsole {
   def lowercase[_: P] = P(CharIn("a-z"))
   def uppercase[_: P] = P(CharIn("A-Z"))
   def digit[_: P] = P(CharIn("0-9"))
-  def simpleStr[_: P] = P(lowercase | uppercase | digit)
+  def simpleStr[_: P] = P(lowercase | uppercase | digit).rep!
   val colouredLayout = new ColoredPatternLayout("%d{[HH:mm:ss,SSS]} %-5p {%c{1}} %m%n");
 }
-
-case class PutObject(key: String, value: String)
-case class CasObject(key: String, refValue: String, newValue: String)
 
 class ClientConsole(val service: ClientService) extends CommandConsole with ParsedCommands with StrictLogging {
   import ClientConsole._;
@@ -49,23 +46,21 @@ class ClientConsole(val service: ClientService) extends CommandConsole with Pars
   override def onInterrupt(): Unit = exit();
 
   val getParser = new ParsingObject[String] {
-    override def parseOperation[_: P]: P[String] = P("get" ~ " " ~ simpleStr.!);
+    override def parseOperation[_: P]: P[String] = P("GET" ~ " " ~ simpleStr.!);
+  }
+  val getCommand = parsed(getParser, usage = "GET <key>", descr = "Gets a value for a <key>") { key =>
+    println(s"GET with $key");
+    val response = executeOperation(Get(key, service.self))
+    if (response != null) {
+      println(s"Response received. Status: ${response.status} Value: ${response.value}")
+    }
   }
 
-  val putParser = new ParsingObject[PutObject] {
-    override def parseOperation[_: P]: P[PutObject] =
-      P("put" ~ " " ~ simpleStr.rep.! ~ " " ~ simpleStr.rep.!).map(x => PutObject(x._1, x._2))
+  val putParser = new ParsingObject[(String, String)] {
+    override def parseOperation[_: P]: P[(String, String)] = P("PUT" ~ " " ~ simpleStr.! ~ " " ~ simpleStr.!);
   }
-
-  val casParser = new ParsingObject[CasObject] {
-    override def parseOperation[_: P]: P[CasObject] =
-      P("cas" ~ " " ~ simpleStr.rep.! ~ " " ~ simpleStr.rep.! ~ " " ~ simpleStr.rep.!)
-        .map(x => CasObject(x._1, x._2, x._3))
-  }
-
-  val putCommand = parsed(putParser, usage = "put <key> <value>", descr = "Executes put for <key> <value>.") {
-    case PutObject(key, value) =>
-      // Create a PUT operation through ClientService
+  val putCommand = parsed(putParser, usage = "PUT <key> <value>", descr = "Puts a <value> at a <key>") { parse =>
+    val (key, value) = parse
     println(s"PUT value $value to key $key");
     val response = executeOperation(Put(key, value, service.self))
     if (response != null) {
@@ -73,36 +68,26 @@ class ClientConsole(val service: ClientService) extends CommandConsole with Pars
     }
   }
 
-  val getCommand = parsed(getParser, usage = "get <key>", descr = "Executes get for <key>.") { key =>
-    println(s"GET with $key");
-    val response = executeOperation(Get(key, service.self))
-    if (response != null) {
-      println(s"Response received. Status: ${response.status} Value: ${response.value}")
-    }
-
+  val casParser = new ParsingObject[(String, String, String)] {
+    override def parseOperation[_: P]: P[(String, String, String)] = P("CAS" ~ " " ~ simpleStr.! ~ " " ~ simpleStr.! ~ " " ~ simpleStr.!);
   }
-  val casCommand = parsed(casParser,
-                          usage = "cas <key> <ref-value> <new-value>",
-                          descr = "Executes cas for <key> <ref-value> <new-value>.") {
-    case CasObject(key, refValue, newValue) =>
-      // Create a CAS operation through ClientService
-    println(s"CAS value $newValue to key $key if current value is $refValue");
-    val response = executeOperation(Cas(key, refValue, newValue, service.self))
+  val casCommand = parsed(casParser, usage = "CAS <key> <referenceValue> <value>", descr = "Puts a <value> at a <key> if current value is <referenceValue>") { parse =>
+    val (key, value, referenceValue) = parse
+    println(s"CAS value $value to key $key if current value is $referenceValue");
+    val response = executeOperation(Cas(key, referenceValue, value, service.self))
     if (response != null) {
       println(s"Response received. Status: ${response.status}")
     }
   }
 
-
-def executeOperation(operation: Op): OpResponse = {
-    val fr = service.op(operation)
-    println("Operation sent! Awaiting response...");
+  def executeOperation(operation: Op): OpResponse = {
+    val fr = service.operation(operation)
+    println("Operation sent to server group for execution , waiting for response");
     try {
       Await.result(fr, 5.seconds);
     } catch {
-      case e: Throwable => logger.error("Error during op.", e)
+      case e: Throwable => logger.error("Something went wrong while performing the operation!!!!!!", e)
       null
     }
   }
-
 }

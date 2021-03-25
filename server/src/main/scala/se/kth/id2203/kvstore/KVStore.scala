@@ -66,6 +66,7 @@ class KVService extends ComponentDefinition {
     case SC_Decide(op: Cas) => {
       println(s"Current operation CAS  $op");
       val storedValue: Option[String] = if (keyValueMap.get(op.key).isDefined) Some(keyValueMap(op.key)) else None
+      println(s"current stored value is $storedValue");
       if (storedValue.isDefined && storedValue.get.equals(op.oldValue)) keyValueMap += ((op.key, op.newValue))
       trigger(NetMessage(self, op.source, op.response(OpCode.Ok, storedValue)) -> net)
     }

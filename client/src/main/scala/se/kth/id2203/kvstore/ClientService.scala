@@ -104,7 +104,9 @@ class ClientService extends ComponentDefinition {
     }
   }
 
-  def op(op: Op): Future[OpResponse] = {
+
+//Its a generalized method to handle all operations , its decided on server which operation to execute
+  def operation(op: Op): Future[OpResponse] = {
       val owf = OpWithPromise(op);
       trigger(owf -> onSelf);  // gets received by LoopbackPort (loopbck)
       owf.promise.future
