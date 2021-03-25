@@ -1,4 +1,4 @@
-# ID2203 Project 2020 Starter Code for Kompics Scala
+# ID2203 Project 2021 Starter Code for Kompics Scala
 
 This project contains some code to get you started with the project.
 You are encouraged to create your own forks and work on them, modifying everything and anything as you desire it.
@@ -80,7 +80,24 @@ Again, make sure not to double allocate ports on the same machine.
 
 The client will attempt to contact the bootstrap server and give you a small command promt if successful. Type `help` to see the available commands.
 
+### Setting up cluster using Script
+
+The above instructions are how to manually set up a cluster. There are some scripts provided to simplify 
+the creation of a cluster. You may modify the files how you want.
+
+Start a cluster with 3 servers (Remember that this number may need to change if you adjust the Bootstrap threshold):
+
+```
+./cluster_setup.sh 3
+```
+
+Connect with client:
+
+```
+./client.sh
+```
+
 ## Issues
 If you find a bug please create an issue on git, or create a pull request with a fix.
 
-If there are other questions, try to talk to the other students (e.g., in Canvas forums) and only if that doesn't help write me an email at <mmeldrum@kth.se>. Or, of course, ask at a lab session.
+If there are other questions, try to talk to the other students (e.g., in Piazza forums) and only if that doesn't help write me an email at <mmeldrum@kth.se>. Or, of course, ask at a lab session.
